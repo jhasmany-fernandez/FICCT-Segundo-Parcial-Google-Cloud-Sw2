@@ -2556,6 +2556,7 @@ app.include_router(auth_router)
 app.include_router(health_router)
 app.include_router(recepciones_router)
 app.include_router(graphql_router, prefix=f"{settings.api_prefix}/graphql")
+app.include_router(graphql_router, prefix="/graphql")
 
 
 #
