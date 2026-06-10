@@ -145,6 +145,10 @@ assign_resp="$(curl -i -s -X PUT "${BASE_URL}/api/emergencias/${emergency_id}/me
   -d "{\"mecanico_id\":${mecanico_id}}")"
 printf '== assign mechanic ==\n%s\n\n' "$assign_resp"
 
+accept_assignment_resp="$(curl -i -s -X POST "${BASE_URL}/api/emergencias/${emergency_id}/aceptar" \
+  -H "Authorization: Bearer ${mec_token}")"
+printf '== accept mechanic assignment ==\n%s\n\n' "$accept_assignment_resp"
+
 tracking_get_resp="$(curl -i -s "${BASE_URL}/api/emergencias/${emergency_id}/tracking" \
   -H "Authorization: Bearer ${admin_token}")"
 printf '== get operational tracking ==\n%s\n\n' "$tracking_get_resp"
