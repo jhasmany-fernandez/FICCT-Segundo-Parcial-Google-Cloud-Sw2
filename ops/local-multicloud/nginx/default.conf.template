@@ -1,0 +1,103 @@
+server {
+    listen 80;
+    server_name _;
+
+    resolver 127.0.0.11 ipv6=off valid=30s;
+
+    location = / {
+        default_type text/plain;
+        return 200 "local multi-cloud simulation gateway\n";
+    }
+
+    location = /health {
+        access_log off;
+        default_type application/json;
+        return 200 '{"status":"ok","service":"local-integration-gateway"}';
+    }
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "local-integration-gateway ok\n";
+    }
+
+    location = /api/health {
+        proxy_pass ${CLOUD_BACKEND_URL}/api/health;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Simulation-Target google-cloud-health;
+    }
+
+    location /api/ {
+        proxy_pass ${CLOUD_BACKEND_URL};
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Simulation-Target google-cloud;
+    }
+
+    location = /openapi.json {
+        proxy_pass ${CLOUD_BACKEND_URL}/openapi.json;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Simulation-Target google-cloud-openapi;
+    }
+
+    location /docs {
+        proxy_pass ${CLOUD_BACKEND_URL};
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Simulation-Target google-cloud-docs;
+    }
+
+    location /gateway/aws/ {
+        proxy_pass http://local-aws-simulator:80/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Simulation-Provider aws;
+    }
+
+    location /gateway/azure/ {
+        proxy_pass http://local-azure-simulator:80/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Simulation-Provider azure;
+    }
+
+    location /gateway/core/ {
+        proxy_pass ${CLOUD_BACKEND_URL}/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Simulation-Target google-cloud;
+    }
+
+    location /gateway/core-local/ {
+        proxy_pass ${LOCAL_BACKEND_URL}/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Simulation-Target local-backend;
+    }
+}

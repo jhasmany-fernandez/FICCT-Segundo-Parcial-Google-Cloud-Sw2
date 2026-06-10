@@ -1,0 +1,132 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-diagramador}
+      POSTGRES_USER: ${POSTGRES_USER:-diagramador}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-diagramador}
+    ports:
+      - "${POSTGRES_PORT:-5454}:5432"
+    volumes:
+      - postgres_data_integracion:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-diagramador} -d ${POSTGRES_DB:-diagramador}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      MS_IA_MULTIMEDIA_URL: http://ms-ia-multimedia:8080
+      MS_SEGUIMIENTO_AUTOMATIZACION_URL: http://ms-seguimiento-automatizacion:8080
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      RABBITMQ_ANALYSIS_QUEUE: emergency.analysis.requested
+    ports:
+      - "8787:8000"
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/uploads:/app/uploads
+      - ./backend/firebase-service-account.json:/app/firebase-service-account.json:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+      ms-ia-multimedia:
+        condition: service_started
+      ms-seguimiento-automatizacion:
+        condition: service_started
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    ports:
+      - "5656:5656"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+  minio:
+    image: minio/minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+  minio-init:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 minioadmin minioadmin; do
+        echo 'Esperando a MinIO...';
+        sleep 2;
+      done;
+      mc mb -p local/emergencias-evidencias || true;
+      echo 'Bucket emergencias-evidencias listo';
+      tail -f /dev/null
+      "
+
+  ms-ia-multimedia:
+    build:
+      context: ./services/ms-ia-multimedia
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: 8080
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      RABBITMQ_ANALYSIS_QUEUE: emergency.analysis.requested
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_BUCKET: emergencias-evidencias
+      S3_FORCE_PATH_STYLE: "true"
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      OPENAI_TRANSCRIPTION_MODEL: ${OPENAI_TRANSCRIPTION_MODEL:-gpt-4o-mini-transcribe}
+    ports:
+      - "8090:8080"
+    depends_on:
+      - rabbitmq
+      - minio
+      - minio-init
+
+  ms-seguimiento-automatizacion:
+    build:
+      context: ./services/ms-seguimiento-automatizacion
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8091:8080"
+
+volumes:
+  postgres_data_integracion:
+  minio_data:

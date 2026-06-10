@@ -1,0 +1,198 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend-python:
+    name: Validate Backend Python
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        if: ${{ hashFiles('backend/requirements.txt') != '' }}
+        run: pip install -r backend/requirements.txt
+
+      - name: Validate backend syntax with py_compile
+        run: |
+          python - <<'PY'
+          import pathlib
+          import py_compile
+          import sys
+
+          files = sorted(pathlib.Path("backend/app").rglob("*.py"))
+          if not files:
+              print("No Python files found under backend/app")
+              sys.exit(0)
+
+          for file_path in files:
+              py_compile.compile(str(file_path), doraise=True)
+
+          print(f"Validated {len(files)} Python files")
+          PY
+
+  frontend-build:
+    name: Validate Frontend Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        if: ${{ hashFiles('frontend/package.json') != '' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Skip missing frontend
+        if: ${{ hashFiles('frontend/package.json') == '' }}
+        run: echo "frontend/package.json not found. Skipping frontend validation."
+
+      - name: Install frontend dependencies
+        if: ${{ hashFiles('frontend/package.json') != '' }}
+        working-directory: frontend
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Build frontend
+        if: ${{ hashFiles('frontend/package.json') != '' }}
+        working-directory: frontend
+        run: npm run build
+
+  ms-ia-multimedia:
+    name: Validate ms-ia-multimedia
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        if: ${{ hashFiles('services/ms-ia-multimedia/package.json') != '' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Skip missing microservice
+        if: ${{ hashFiles('services/ms-ia-multimedia/package.json') == '' }}
+        run: echo "services/ms-ia-multimedia/package.json not found. Skipping ms-ia-multimedia validation."
+
+      - name: Install ms-ia-multimedia dependencies
+        if: ${{ hashFiles('services/ms-ia-multimedia/package.json') != '' }}
+        working-directory: services/ms-ia-multimedia
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Check build script existence
+        if: ${{ hashFiles('services/ms-ia-multimedia/package.json') != '' }}
+        id: ms_build_check
+        run: |
+          node -e "const pkg=require('./services/ms-ia-multimedia/package.json'); if(pkg.scripts && pkg.scripts.build){console.log('has_build=true')}else{console.log('has_build=false')}" >> "$GITHUB_OUTPUT"
+
+      - name: Build ms-ia-multimedia
+        if: ${{ hashFiles('services/ms-ia-multimedia/package.json') != '' && steps.ms_build_check.outputs.has_build == 'true' }}
+        working-directory: services/ms-ia-multimedia
+        run: npm run build
+
+      - name: Type-check ms-ia-multimedia
+        if: ${{ hashFiles('services/ms-ia-multimedia/package.json') != '' && steps.ms_build_check.outputs.has_build != 'true' }}
+        working-directory: services/ms-ia-multimedia
+        run: npx tsc --noEmit
+
+  yaml-validation:
+    name: Validate YAML Files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PyYAML
+        run: pip install pyyaml
+
+      - name: Parse YAML files
+        run: |
+          python - <<'PY'
+          import pathlib
+          import sys
+          import yaml
+
+          files = sorted(pathlib.Path(".").rglob("*.yml")) + sorted(pathlib.Path(".").rglob("*.yaml"))
+          files = sorted({path.resolve() for path in files})
+          if not files:
+              print("No YAML files found.")
+              sys.exit(0)
+
+          for file_path in files:
+              with open(file_path, "r", encoding="utf-8") as handle:
+                  list(yaml.safe_load_all(handle))
+
+          print(f"Validated {len(files)} YAML files")
+          PY
+
+  kubernetes-manifests:
+    name: Validate Kubernetes Manifests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check k8s directory
+        id: k8s_check
+        run: |
+          if [ -d k8s ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip missing k8s manifests
+        if: ${{ steps.k8s_check.outputs.exists != 'true' }}
+        run: echo "k8s/ not found. Skipping Kubernetes validation."
+
+      - name: Set up Python
+        if: ${{ steps.k8s_check.outputs.exists == 'true' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PyYAML
+        if: ${{ steps.k8s_check.outputs.exists == 'true' }}
+        run: pip install pyyaml
+
+      - name: Parse k8s YAML manifests
+        if: ${{ steps.k8s_check.outputs.exists == 'true' }}
+        run: |
+          python - <<'PY'
+          import pathlib
+          import yaml
+
+          files = sorted(pathlib.Path("k8s").rglob("*.yml")) + sorted(pathlib.Path("k8s").rglob("*.yaml"))
+          if not files:
+              raise SystemExit("k8s/ exists but no YAML manifests were found")
+
+          for file_path in files:
+              with open(file_path, "r", encoding="utf-8") as handle:
+                  list(yaml.safe_load_all(handle))
+
+          print(f"Validated {len(files)} Kubernetes manifest files")
+          PY

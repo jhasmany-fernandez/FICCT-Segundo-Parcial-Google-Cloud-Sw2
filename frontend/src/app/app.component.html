@@ -1,0 +1,69 @@
+<div class="app-shell">
+  <div class="page-orb orb-one"></div>
+  <div class="page-orb orb-two"></div>
+  <div class="page-orb orb-three"></div>
+
+  <ng-container *ngIf="!(isAuthRoute$ | async)">
+    <div class="utility-bar">
+      <p>Centro de atención telefónica: 2791727</p>
+      <p>Auxilio mecánico: 800163316</p>
+      <a routerLink="/contacto">Contacto</a>
+    </div>
+
+    <header class="topbar">
+      <a class="login-button" routerLink="/login">Iniciar sesión</a>
+
+      <div class="brand-block">
+        <a class="brand" routerLink="/">
+          <span class="brand-mark" aria-hidden="true">
+            <img src="/icono.png" alt="Logo del sistema" />
+          </span>
+          <span class="brand-copy">
+            <strong>Sistema Inteligente de Atencion de Emergencias Vehiculares</strong>
+            <small>Coordinacion empresarial de emergencias, asistencia mecanica y remolque</small>
+          </span>
+        </a>
+      </div>
+
+      <div class="nav-row">
+        <nav class="main-nav" aria-label="Principal">
+          <a
+            *ngFor="let item of navigation"
+            [routerLink]="item.path"
+            routerLinkActive="is-active"
+            [routerLinkActiveOptions]="{ exact: item.path === '/' }"
+          >
+            {{ item.label }}
+          </a>
+        </nav>
+      </div>
+    </header>
+  </ng-container>
+
+  <router-outlet />
+
+  <footer class="site-footer" *ngIf="!(isAuthRoute$ | async)">
+    <section class="footer-brand">
+      <span class="footer-pill">Asistencia 24/7</span>
+      <p class="footer-title">Sistema Inteligente de Atencion de Emergencias Vehiculares</p>
+      <p>Coordinamos clientes, sucursales y mecanicos vehiculares para responder con rapidez ante emergencias en ruta.</p>
+    </section>
+
+    <section>
+      <p class="footer-title">Enlaces rápidos</p>
+      <a routerLink="/">Inicio</a>
+      <a routerLink="/servicios">Servicios</a>
+      <a routerLink="/planes">Cobertura</a>
+      <a routerLink="/mapa">Mapa</a>
+      <a routerLink="/contacto">Contacto</a>
+    </section>
+
+    <section>
+      <p class="footer-title">Contacto</p>
+      <p>marketing@acbasistencia.com</p>
+      <p>Centro de atención: 2791727</p>
+      <p>Línea gratuita: 800163316</p>
+      <p>La Paz, Bolivia</p>
+    </section>
+  </footer>
+</div>

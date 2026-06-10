@@ -1,0 +1,24 @@
+{
+  "name": "ms-ia-multimedia",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "ts-node src/server.ts"
+  },
+  "dependencies": {
+    "amqplib": "^0.10.8",
+    "@aws-sdk/client-s3": "^3.937.0",
+    "express": "^4.21.2",
+    "multer": "^2.0.2",
+    "openai": "^6.7.0",
+    "prom-client": "^15.1.3"
+  },
+  "devDependencies": {
+    "@types/amqplib": "^0.10.8",
+    "@types/express": "^5.0.3",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^24.10.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}

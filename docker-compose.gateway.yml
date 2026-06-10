@@ -1,0 +1,78 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-diagramador}
+      POSTGRES_USER: ${POSTGRES_USER:-diagramador}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-diagramador}
+    ports:
+      - "${POSTGRES_PORT:-5454}:5432"
+    volumes:
+      - postgres_data_gateway:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-diagramador} -d ${POSTGRES_DB:-diagramador}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    ports:
+      - "8787:8000"
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/uploads:/app/uploads
+      - ./backend/firebase-service-account.json:/app/firebase-service-account.json:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    ports:
+      - "5656:5656"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+  ms-ia-multimedia:
+    build:
+      context: ./services/ms-ia-multimedia
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8090:8080"
+
+  ms-seguimiento-automatizacion:
+    build:
+      context: ./services/ms-seguimiento-automatizacion
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8091:8080"
+
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+      - ms-ia-multimedia
+      - ms-seguimiento-automatizacion
+
+volumes:
+  postgres_data_gateway:

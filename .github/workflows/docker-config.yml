@@ -1,0 +1,58 @@
+name: Docker Compose Config
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  docker-config:
+    name: Validate Docker Compose Files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare temporary env files and placeholders
+        shell: bash
+        run: |
+          if [ ! -f backend/.env ]; then
+            if [ -f backend/.env.example ]; then
+              cp backend/.env.example backend/.env
+            else
+              mkdir -p backend
+              printf '%s\n' \
+                'APP_ENV=development' \
+                'APP_DEBUG=true' \
+                'API_PREFIX=/api' \
+                'POSTGRES_DB=diagramador' \
+                'POSTGRES_USER=diagramador' \
+                'POSTGRES_PASSWORD=diagramador' \
+                'POSTGRES_HOST=db' \
+                'POSTGRES_PORT=5432' \
+                > backend/.env
+            fi
+          fi
+
+          if [ ! -f backend/firebase-service-account.json ]; then
+            mkdir -p backend
+            printf '{}\n' > backend/firebase-service-account.json
+          fi
+
+      - name: Check docker-compose files
+        shell: bash
+        run: |
+          files=(
+            "docker-compose.yml"
+            "docker-compose.integracion.yml"
+            "docker-compose.gateway.yml"
+            "docker-compose.observabilidad.yml"
+          )
+
+          for file in "${files[@]}"; do
+            if [ -f "$file" ]; then
+              echo "Validating $file"
+              docker compose -f "$file" config
+            else
+              echo "Skipping missing $file"
+            fi
+          done

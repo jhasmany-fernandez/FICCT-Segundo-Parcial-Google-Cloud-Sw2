@@ -1,0 +1,2 @@
+ALTER TABLE fichas_recepcion
+ADD COLUMN IF NOT EXISTS finalized_at TIMESTAMPTZ;

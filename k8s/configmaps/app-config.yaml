@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: ficct-emergencias
+data:
+  APP_ENV: development
+  API_PREFIX: /api
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: "5432"
+  MS_IA_MULTIMEDIA_URL: http://ms-ia-multimedia:8080
+  RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+  RABBITMQ_ANALYSIS_QUEUE: emergency.analysis.requested
+  S3_ENDPOINT: http://minio:9000
+  S3_BUCKET: emergencias-evidencias

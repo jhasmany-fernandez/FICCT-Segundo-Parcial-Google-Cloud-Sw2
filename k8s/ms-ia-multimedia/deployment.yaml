@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-ia-multimedia
+  namespace: ficct-emergencias
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ms-ia-multimedia
+  template:
+    metadata:
+      labels:
+        app: ms-ia-multimedia
+    spec:
+      containers:
+        - name: ms-ia-multimedia
+          image: ficct-ms-ia-multimedia:local
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: app-secrets
