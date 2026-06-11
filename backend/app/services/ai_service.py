@@ -57,7 +57,7 @@ def _post_request(url: str, *, data: bytes, headers: dict[str, str]) -> dict[str
 def _post_file(endpoint: str, *, emergency_id: int, field_name: str, file_path: str | Path) -> dict[str, object]:
     path = Path(file_path)
     if not path.is_file():
-        raise AIServiceError(f"Archivo no encontrado para enviar a VM3: {path}")
+        raise AIServiceError(f"Archivo no encontrado para enviar al servicio IA/AWS: {path}")
     body, boundary = _build_multipart_body({"emergencia_id": str(emergency_id)}, field_name, path)
     return _post_request(
         f"{settings.base_url_ai}{endpoint}",

@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    app_name: str = "FICCT Diagramador API"
+    app_name: str = "Backend FastAPI API"
     app_env: str = "development"
     app_debug: bool = True
     api_prefix: str = "/api"
@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     protected_admin_full_name: str = "Administrador ACB"
     protected_admin_phone: str = "70000000"
     workshop_initial_password: str = "acb123*"
-    base_url_ai: str = "http://34.122.37.25:8010"
+    base_url_ai: str = "http://54.221.156.220:8010"
     ai_service_timeout_seconds: int = 10
 
     postgres_db: str = "diagramador"

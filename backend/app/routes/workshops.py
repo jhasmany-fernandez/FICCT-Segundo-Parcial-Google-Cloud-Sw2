@@ -1,6 +1,8 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Security, status
 
 from app.config import settings
+from app.constants import PROTECTED_ADMIN_ROLE
+from app.core.dependencies import AuthenticatedUser, require_roles
 from app.db import (
     create_workshop_registration,
     delete_workshop_registration,
@@ -111,7 +113,11 @@ def get_workshops() -> list[WorkshopRegistrationResponse]:
     "/workshops/{workshop_id}",
     response_model=WorkshopRegistrationResponse,
 )
-def edit_workshop(workshop_id: int, payload: WorkshopRegistrationCreate) -> WorkshopRegistrationResponse:
+def edit_workshop(
+    workshop_id: int,
+    payload: WorkshopRegistrationCreate,
+    _current_user: AuthenticatedUser = Security(require_roles(PROTECTED_ADMIN_ROLE)),
+) -> WorkshopRegistrationResponse:
     # LOGICA: editar datos del taller no debe cambiar ni su aprobacion ni su contraseña.
     # Asi los datos administrativos sensibles solo cambian en flujos especificos.
     # La edicion del perfil no debe cambiar por accidente ni el estado de aprobacion ni la contraseña.
@@ -149,6 +155,7 @@ def edit_workshop(workshop_id: int, payload: WorkshopRegistrationCreate) -> Work
 def edit_workshop_approval_status(
     workshop_id: int,
     payload: WorkshopApprovalStatusUpdate,
+    _current_user: AuthenticatedUser = Security(require_roles(PROTECTED_ADMIN_ROLE)),
 ) -> WorkshopRegistrationResponse:
     # LOGICA: aqui se validan transiciones permitidas de estado para el taller.
     # La validacion impide cambios de estado incoherentes con las reglas del negocio.
@@ -201,7 +208,10 @@ def edit_workshop_approval_status(
     "/workshops/{workshop_id}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
-def remove_workshop(workshop_id: int) -> None:
+def remove_workshop(
+    workshop_id: int,
+    _current_user: AuthenticatedUser = Security(require_roles(PROTECTED_ADMIN_ROLE)),
+) -> None:
     deleted = delete_workshop_registration(workshop_id)
 
     if not deleted:

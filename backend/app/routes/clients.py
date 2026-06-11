@@ -1,7 +1,9 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Security, status
 from sqlalchemy.exc import IntegrityError
 
 from app.config import settings
+from app.constants import PROTECTED_ADMIN_ROLE
+from app.core.dependencies import AuthenticatedUser, require_roles
 from app.db import create_client, delete_client, list_clients, update_client, update_client_status
 from app.schemas import (
     ClientRegistrationCreate,
@@ -145,7 +147,11 @@ def get_clients() -> list[ClientRegistrationResponse]:
     "/clientes/{client_id}/status",
     response_model=ClientRegistrationResponse,
 )
-def edit_client_status(client_id: int, payload: ClientStatusUpdate) -> ClientRegistrationResponse:
+def edit_client_status(
+    client_id: int,
+    payload: ClientStatusUpdate,
+    _current_user: AuthenticatedUser = Security(require_roles(PROTECTED_ADMIN_ROLE)),
+) -> ClientRegistrationResponse:
     # LOGICA: este flujo solo altera el estado de la cuenta, sin tocar el resto del perfil.
     # Sirve para suspender o reactivar sin reescribir otros datos.
     # Permite bloquear o reactivar cuentas sin modificar el resto del perfil.
@@ -173,7 +179,11 @@ def edit_client_status(client_id: int, payload: ClientStatusUpdate) -> ClientReg
     "/clientes/{client_id}",
     response_model=ClientRegistrationResponse,
 )
-def edit_client(client_id: int, payload: ClientUpdate) -> ClientRegistrationResponse:
+def edit_client(
+    client_id: int,
+    payload: ClientUpdate,
+    _current_user: AuthenticatedUser = Security(require_roles(PROTECTED_ADMIN_ROLE)),
+) -> ClientRegistrationResponse:
     # CONEXION CON EL MOVIL: aqui llega la edicion del perfil del cliente desde la app.
     # Recibe cambios del perfil del cliente enviados desde una pantalla de edicion.
     # LOGICA: si no mandan contraseña nueva, se conserva la contraseña anterior.
@@ -242,7 +252,10 @@ def edit_client(client_id: int, payload: ClientUpdate) -> ClientRegistrationResp
     "/clientes/{client_id}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
-def remove_client(client_id: int) -> None:
+def remove_client(
+    client_id: int,
+    _current_user: AuthenticatedUser = Security(require_roles(PROTECTED_ADMIN_ROLE)),
+) -> None:
     # LOGICA: al eliminar un cliente, tambien deben desaparecer sus recursos asociados.
     # Esto mantiene consistente la informacion relacionada del sistema.
     # El borrado tambien elimina sus vehiculos asociados desde la capa de base de datos.

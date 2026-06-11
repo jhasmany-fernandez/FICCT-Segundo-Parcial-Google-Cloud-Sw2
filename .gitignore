@@ -103,6 +103,7 @@ postgres_data/
 *.sqlite3
 *.db
 *.bak
+ops/backups/*.dump
 
 # Framework and bundler output
 .next/

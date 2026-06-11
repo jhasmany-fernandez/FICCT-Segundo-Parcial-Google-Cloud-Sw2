@@ -2653,11 +2653,9 @@ def publish_emergency_analysis_requested(payload: IaQueueTestRequest) -> None:
     response_model=IaQueueTestResponse,
 )
 def queue_emergency_analysis(payload: IaQueueTestRequest) -> IaQueueTestResponse:
-    publish_emergency_analysis_requested(payload)
-    return IaQueueTestResponse(
-        status="queued",
-        queue=settings.rabbitmq_analysis_queue,
-        emergency_id=payload.emergency_id,
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Endpoint de prueba deshabilitado en este entorno",
     )
 
 
@@ -2666,8 +2664,10 @@ def queue_emergency_analysis(payload: IaQueueTestRequest) -> IaQueueTestResponse
     response_model=IaAnalyzeEmergencyResponse,
 )
 def analyze_emergency_with_ia(payload: IaAnalyzeEmergencyRequest) -> IaAnalyzeEmergencyResponse:
-    response = call_ms_ia_multimedia_analyze(payload)
-    return IaAnalyzeEmergencyResponse(**response)
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Endpoint de prueba deshabilitado en este entorno",
+    )
 
 
 @app.post(
@@ -3179,14 +3179,14 @@ def register_emergency(
             ai_payload,
             actor_user_id=None,
             actor_role="sistema",
-            source_app="vm3_ai_service",
+            source_app="aws_ai_service",
             endpoint=settings.base_url_ai,
         )
         if updated_ai_row is not None:
             created = updated_ai_row
     except AIServiceError as exc:
         logger.warning(
-            "No se pudo procesar la emergencia %s con VM3: %s",
+            "No se pudo procesar la emergencia %s con AWS IA: %s",
             created.get("id"),
             exc,
         )
@@ -4450,7 +4450,11 @@ def forgot_workshop_password(payload: WorkshopForgotPasswordRequest) -> dict[str
     f"{settings.api_prefix}/workshops/{{workshop_id}}",
     response_model=WorkshopRegistrationResponse,
 )
-def edit_workshop(workshop_id: int, payload: WorkshopRegistrationUpdate) -> WorkshopRegistrationResponse:
+def edit_workshop(
+    workshop_id: int,
+    payload: WorkshopRegistrationUpdate,
+    _current_user: AuthenticatedUser = Security(require_roles(PROTECTED_ADMIN_ROLE)),
+) -> WorkshopRegistrationResponse:
     updated = update_workshop_registration(
         workshop_id,
         {
@@ -4473,6 +4477,7 @@ def edit_workshop(workshop_id: int, payload: WorkshopRegistrationUpdate) -> Work
 def edit_workshop_approval_status(
     workshop_id: int,
     payload: WorkshopApprovalStatusUpdate,
+    _current_user: AuthenticatedUser = Security(require_roles(PROTECTED_ADMIN_ROLE)),
 ) -> WorkshopRegistrationResponse:
     current_workshop = get_workshop_by_id(workshop_id)
 
@@ -4505,7 +4510,10 @@ def edit_workshop_approval_status(
     f"{settings.api_prefix}/workshops/{{workshop_id}}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
-def remove_workshop(workshop_id: int) -> None:
+def remove_workshop(
+    workshop_id: int,
+    _current_user: AuthenticatedUser = Security(require_roles(PROTECTED_ADMIN_ROLE)),
+) -> None:
     deleted = delete_workshop_registration(workshop_id)
 
     if not deleted:
@@ -4622,7 +4630,11 @@ def forgot_client_password(payload: ClientForgotPasswordRequest) -> dict[str, st
     f"{settings.api_prefix}/clientes/{{client_id}}/status",
     response_model=ClientRegistrationResponse,
 )
-def edit_client_status(client_id: int, payload: ClientStatusUpdate) -> ClientRegistrationResponse:
+def edit_client_status(
+    client_id: int,
+    payload: ClientStatusUpdate,
+    _current_user: AuthenticatedUser = Security(require_roles(PROTECTED_ADMIN_ROLE)),
+) -> ClientRegistrationResponse:
     updated = update_client_status(client_id, payload.status)
 
     if not updated:
@@ -4635,7 +4647,11 @@ def edit_client_status(client_id: int, payload: ClientStatusUpdate) -> ClientReg
     f"{settings.api_prefix}/clientes/{{client_id}}",
     response_model=ClientRegistrationResponse,
 )
-def edit_client(client_id: int, payload: ClientUpdate) -> ClientRegistrationResponse:
+def edit_client(
+    client_id: int,
+    payload: ClientUpdate,
+    _current_user: AuthenticatedUser = Security(require_roles(PROTECTED_ADMIN_ROLE)),
+) -> ClientRegistrationResponse:
     normalized_email = payload.email.lower().strip()
 
     if is_protected_admin_email(normalized_email):
@@ -4679,7 +4695,10 @@ def edit_client(client_id: int, payload: ClientUpdate) -> ClientRegistrationResp
     f"{settings.api_prefix}/clientes/{{client_id}}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
-def remove_client(client_id: int) -> None:
+def remove_client(
+    client_id: int,
+    _current_user: AuthenticatedUser = Security(require_roles(PROTECTED_ADMIN_ROLE)),
+) -> None:
     deleted = delete_client(client_id)
 
     if not deleted:
